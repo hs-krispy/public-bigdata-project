@@ -113,3 +113,70 @@ plt.show()
 
 <img src="https://user-images.githubusercontent.com/58063806/128029126-a7e044de-a408-4056-a02f-6c88a94ac122.png" width=90% />
 
+#### 서울시 지점, 시간대별 교통량 
+
+```python
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+
+pd.set_option('display.max_rows', 1000)
+pd.set_option('display.max_columns', 1000)
+pd.set_option('display.width', 1000)
+plt.rc("font", family="Malgun Gothic")
+df = pd.read_excel("C:/Users/user/Desktop/프로젝트/06월 서울시 교통량 조사자료.xlsx", sheet_name="2021년 06월")
+
+# 차량전용도로는 제외
+match = df["지점명"].apply(lambda x: re.search(r"분당수서로|우면산로|신월여의지하도로|강남순환로|올림픽대로|강변북로|제물포길|양재대로|서부간선|동부간선|내부순환로|북부간선|언주로|IC|고속도로", str(x)))
+filtered = match.apply(lambda x: x is None)
+df = df.loc[filtered, :]
+Mean = df.pivot_table(df.columns[6:], index="지점명", aggfunc="mean")
+Sum = df.pivot_table(df.columns[6:], index="지점명", aggfunc="mean").sum(axis=1)
+fig, axes = plt.subplots(3, 3, figsize=(15, 15), constrained_layout=True)
+res = Mean.div(Sum, axis=0)
+res["sum"] = Sum
+res.sort_values(by="sum", ascending=False, inplace=True)
+# 0 ~ 23시
+res = res.loc[:, df.columns[6:]]
+# 상위 11개 대교 제외하고 차상위 9개 구간
+for i, ax in enumerate(axes.flatten()):
+    ax.set_title(res.index[11 + i])
+    ax.plot(range(24), [1 / 24] * 24, "r--")
+    res.iloc[11 + i, :].plot.bar(ax=ax, rot=45)
+
+plt.show()
+```
+
+<img src="https://user-images.githubusercontent.com/58063806/128717256-342a7f26-c2ea-4255-aa67-5a8c2d030b53.png" width=100% />
+
+#### 시간대별 이륜차 사고 비율
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+plt.rc("font", family="Malgun Gothic")
+plt.figure(figsize=(15, 8))
+df = pd.read_excel("C:/Users/user/Desktop/프로젝트/서울시 동별 이륜차 사고건수 (2017~2019).xlsx")
+df["사고일시"] = df["사고일시"].apply(lambda x: x.split(" ")[3])
+p_df = df["사고일시"].value_counts() / df.shape[0]
+print(p_df.cumsum())
+q1 = p_df[p_df.cumsum() > 0.25].index[0]
+q2 = p_df[p_df.cumsum() > 0.5].index[0]
+q3 = p_df[p_df.cumsum() > 0.75].index[0]
+q1_index = p_df.index.tolist().index(q1)
+q2_index = p_df.index.tolist().index(q2)
+q3_index = p_df.index.tolist().index(q3)
+plt.plot(range(q1_index, 24), [p_df[p_df.index == q1]] * (24 - q1_index), "r--")
+plt.text(14, p_df[p_df.index == q1], "over 25%", fontdict={"fontsize" : "x-large", "fontfamily": "Malgun Gothic"})
+plt.plot(range(q2_index, 24), [p_df[p_df.index == q2]] * (24 - q2_index), "r--")
+plt.text(14, p_df[p_df.index == q2], "over 50%", fontdict={"fontsize" : "x-large", "fontfamily": "Malgun Gothic"})
+plt.plot(range(q3_index, 24), [p_df[p_df.index == q3]] * (24 - q3_index), "r--")
+plt.text(14, p_df[p_df.index == q3], "over 75%", fontdict={"fontsize" : "x-large", "fontfamily": "Malgun Gothic"})
+p_df.plot.bar(rot=45)
+plt.title("시간별 이륜차 사고 비율")
+plt.show()
+```
+
+<img src="https://user-images.githubusercontent.com/58063806/128716699-f5aa7420-c501-48cf-bead-479860262ec3.png" width=90% />
+
